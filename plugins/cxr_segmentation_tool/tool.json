@@ -1,0 +1,26 @@
+{
+  "name": "cxr_segmentation_tool",
+  "entrypoint": "plugins.cxr_segmentation_tool.logic:execute",
+  "description": "Segment anatomy/lesions in a 2D chest X-ray via a configurable segmentation backend (local torchvision checkpoint, remote API, or deterministic fallback); returns a colored region overlay and per-region area fractions.",
+  "task": "cxr_segmentation",
+  "modality": "image",
+  "source": "plugin",
+  "aliases": ["segment", "cxr_segment"],
+  "routing": { "trigger_keywords": ["segment", "cxr_segment", "cxrsegment"] },
+  "direct_chat": {
+    "response_kind": "image_chat",
+    "result_kind": "image_analysis",
+    "requested_view": "cxr_segmentation",
+    "studio": { "renderer": "cxr_segmentation" },
+    "source_types": ["image"]
+  },
+  "source_types": ["image"],
+  "help": {
+    "summary": "Run CXR segmentation and overlay region masks (e.g. lungs, heart) with area fractions.",
+    "options": [
+      { "name": "targets", "type": "string", "description": "Comma list of regions to segment.", "default": "lung_left,lung_right,heart" }
+    ],
+    "examples": ["@segment", "@segment targets=lung_left,lung_right,heart", "@segment help"],
+    "notes": ["Backend selected via CXR_SEGMENTATION_BACKEND (fallback|torchvision|remote)."]
+  }
+}

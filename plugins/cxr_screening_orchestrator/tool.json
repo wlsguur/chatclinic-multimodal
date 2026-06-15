@@ -1,0 +1,27 @@
+{
+  "name": "cxr_screening_orchestrator",
+  "entrypoint": "plugins.cxr_screening_orchestrator.logic:execute",
+  "description": "Chest X-ray screening orchestrator: chains the CXR tools (quality -> detect -> segment -> measure) via run_tool, merges their artifacts, and writes one combined grounded summary. Demonstrates multi-tool orchestration.",
+  "task": "cxr_screening",
+  "modality": "image",
+  "source": "plugin",
+  "aliases": ["screen", "cxr", "cxr_screen"],
+  "routing": { "trigger_keywords": ["screen", "cxr", "cxr_screen"] },
+  "direct_chat": {
+    "response_kind": "image_chat",
+    "result_kind": "image_analysis",
+    "requested_view": "cxr_screening",
+    "studio": { "renderer": "cxr_screening" },
+    "source_types": ["image"]
+  },
+  "source_types": ["image"],
+  "help": {
+    "summary": "Run the full CXR screening pipeline (quality, detection, segmentation, measurement) and ground a combined summary.",
+    "options": [
+      { "name": "stages", "type": "string", "description": "Comma list of stages to run.", "default": "quality,detect,segment,measure" },
+      { "name": "score", "type": "float", "description": "Detection confidence threshold.", "default": 0.5 }
+    ],
+    "examples": ["@screen", "@screen stages=detect,measure", "@screen help"],
+    "notes": ["Pure orchestrator (no model); chains the other CXR tools and degrades gracefully if a backend has no weights."]
+  }
+}

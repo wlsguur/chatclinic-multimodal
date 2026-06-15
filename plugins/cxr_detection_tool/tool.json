@@ -1,0 +1,26 @@
+{
+  "name": "cxr_detection_tool",
+  "entrypoint": "plugins.cxr_detection_tool.logic:execute",
+  "description": "Detect findings in a 2D chest X-ray via a configurable detection backend (local torchvision checkpoint, remote API, or deterministic fallback); returns bounding boxes with labels, scores, and per-finding measurements.",
+  "task": "cxr_detection",
+  "modality": "image",
+  "source": "plugin",
+  "aliases": ["detect", "cxr_detect"],
+  "routing": { "trigger_keywords": ["detect", "cxr_detect", "cxrdetect"] },
+  "direct_chat": {
+    "response_kind": "image_chat",
+    "result_kind": "image_analysis",
+    "requested_view": "cxr_detection",
+    "studio": { "renderer": "cxr_detection" },
+    "source_types": ["image"]
+  },
+  "source_types": ["image"],
+  "help": {
+    "summary": "Run CXR object detection and overlay bounding boxes with per-finding measurements.",
+    "options": [
+      { "name": "score", "type": "float", "description": "Confidence threshold for kept findings.", "default": 0.5 }
+    ],
+    "examples": ["@detect", "@detect score=0.6", "@detect help"],
+    "notes": ["Backend selected via CXR_DETECTION_BACKEND (fallback|torchvision|remote)."]
+  }
+}

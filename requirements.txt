@@ -6,10 +6,12 @@ pysam>=0.23,<1.0
 openpyxl>=3.1,<4.0
 Pillow>=10.0,<12.0
 nibabel>=5.2,<6.0
+numpy>=1.24,<3.0
 
 # Recommended runtime: Python 3.10
 # For NVIDIA CUDA 12.1, install the matching PyTorch wheels/index as needed.
 torch==2.5.1
 torchvision==0.20.1
-transformers==4.57.6
-vllm==0.18.1
+# vllm / transformers removed: not imported anywhere in the codebase, and
+# vllm==0.18.1 pulls torch==2.10.0 / torchvision==0.25.0 (uninstallable,
+# conflicts with the pinned torch 2.5.1). Re-add only if a tool requires them.

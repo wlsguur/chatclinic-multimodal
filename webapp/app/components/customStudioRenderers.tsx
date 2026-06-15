@@ -382,6 +382,287 @@ function ImageReviewCard({
   );
 }
 
+// --- CXR tool suite cards ------------------------------------------------- //
+// Bounding boxes are positioned in percentages of the original image size, so
+// they scale correctly with the responsive <img> without ref/onLoad math.
+function CxrImageWithBoxes({
+  src,
+  width,
+  height,
+  boxes,
+  overlaySrc,
+}: {
+  src?: string | null;
+  width: number;
+  height: number;
+  boxes?: Array<{ box_xyxy: number[]; label: string; score: number }>;
+  overlaySrc?: string | null;
+}) {
+  if (!src) return <p className="mutedNote">No image preview available.</p>;
+  const W = width || 1;
+  const H = height || 1;
+  return (
+    <div style={{ position: "relative" as const, display: "inline-block" as const, maxWidth: "100%", lineHeight: 0 }}>
+      <img
+        src={src}
+        alt="cxr"
+        style={{ display: "block" as const, width: "100%", height: "auto", borderRadius: "6px", border: "1px solid var(--border-color, #ddd)" }}
+      />
+      {overlaySrc ? (
+        <img
+          src={overlaySrc}
+          alt="overlay"
+          style={{ position: "absolute" as const, inset: 0, width: "100%", height: "100%", pointerEvents: "none" as const }}
+        />
+      ) : null}
+      {(boxes ?? []).map((b, i) => {
+        const [x1, y1, x2, y2] = b.box_xyxy;
+        return (
+          <div
+            key={i}
+            style={{
+              position: "absolute" as const,
+              left: `${(x1 / W) * 100}%`,
+              top: `${(y1 / H) * 100}%`,
+              width: `${((x2 - x1) / W) * 100}%`,
+              height: `${((y2 - y1) / H) * 100}%`,
+              border: "2px solid #ff3b30",
+              borderRadius: "2px",
+              boxShadow: "0 0 0 1px rgba(0,0,0,0.35)",
+            }}
+          >
+            <span
+              style={{
+                position: "absolute" as const,
+                top: "-1.25rem",
+                left: 0,
+                background: "#ff3b30",
+                color: "#fff",
+                fontSize: "0.7rem",
+                padding: "0 4px",
+                borderRadius: "2px",
+                whiteSpace: "nowrap" as const,
+              }}
+            >
+              {b.label} {Math.round((b.score ?? 0) * 100)}%
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function CxrDetectionCard({
+  analysis,
+  components,
+}: {
+  analysis: any;
+  components: StudioRendererBuilderArgs["components"];
+}) {
+  const { WarningListCard } = components;
+  const a = analysis?.artifacts?.cxr_detection ?? {};
+  const findings: any[] = Array.isArray(a.findings) ? a.findings : [];
+  return (
+    <section className="notebookPanel studioCanvasPanel">
+      <div className="notebookHeader">
+        <h2>CXR Detection</h2>
+        <span className="pill">backend: {String(a.backend ?? "n/a")}</span>
+      </div>
+      <div className="studioCanvasBody">
+        <CxrImageWithBoxes src={a.preview_data_url} width={a.image_width} height={a.image_height} boxes={findings} />
+        <article className="miniCard" style={{ maxWidth: "100%", overflow: "hidden" }}>
+          <h3>{findings.length} finding(s) at score ≥ {Number(a.score_threshold ?? 0).toFixed(2)}</h3>
+          <div className="variantTableWrap summaryStatsTableWrap">
+            <table className="variantTable summaryStatsTable">
+              <thead><tr><th>Label</th><th>Score</th><th>Quadrant</th><th>Area %</th><th>Box (px)</th></tr></thead>
+              <tbody>
+                {findings.map((f, i) => (
+                  <tr key={i}>
+                    <td>{f.label}</td>
+                    <td>{Math.round((f.score ?? 0) * 100)}%</td>
+                    <td>{f.quadrant}</td>
+                    <td>{((f.area_fraction ?? 0) * 100).toFixed(1)}%</td>
+                    <td>{(f.box_xyxy ?? []).map((v: number) => Math.round(v)).join(", ")}</td>
+                  </tr>
+                ))}
+                {findings.length === 0 ? <tr><td colSpan={5}>No findings above threshold.</td></tr> : null}
+              </tbody>
+            </table>
+          </div>
+        </article>
+        <WarningListCard warnings={Array.isArray(analysis?.warnings) ? analysis.warnings : []} emptyLabel="No detection warnings." />
+      </div>
+    </section>
+  );
+}
+
+function CxrSegmentationCard({
+  analysis,
+  components,
+}: {
+  analysis: any;
+  components: StudioRendererBuilderArgs["components"];
+}) {
+  const { WarningListCard } = components;
+  const a = analysis?.artifacts?.cxr_segmentation ?? {};
+  const regions: any[] = Array.isArray(a.regions) ? a.regions : [];
+  return (
+    <section className="notebookPanel studioCanvasPanel">
+      <div className="notebookHeader">
+        <h2>CXR Segmentation</h2>
+        <span className="pill">backend: {String(a.backend ?? "n/a")}</span>
+      </div>
+      <div className="studioCanvasBody">
+        <CxrImageWithBoxes src={a.preview_data_url} width={a.image_width} height={a.image_height} overlaySrc={a.overlay_data_url} />
+        <article className="miniCard">
+          <h3>{regions.length} region(s)</h3>
+          <div className="variantTableWrap summaryStatsTableWrap">
+            <table className="variantTable summaryStatsTable">
+              <thead><tr><th>Region</th><th>Area %</th><th>Bbox (px)</th></tr></thead>
+              <tbody>
+                {regions.map((r, i) => (
+                  <tr key={i}>
+                    <td>{r.name}</td>
+                    <td>{((r.area_fraction ?? 0) * 100).toFixed(1)}%</td>
+                    <td>{(r.bbox_xyxy ?? []).map((v: number) => Math.round(v)).join(", ")}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </article>
+        <WarningListCard warnings={Array.isArray(analysis?.warnings) ? analysis.warnings : []} emptyLabel="No segmentation warnings." />
+      </div>
+    </section>
+  );
+}
+
+function CxrMeasurementCard({
+  analysis,
+  components,
+}: {
+  analysis: any;
+  components: StudioRendererBuilderArgs["components"];
+}) {
+  const { StudioMetricGrid, WarningListCard } = components;
+  const a = analysis?.artifacts?.cxr_measurement ?? {};
+  const ctr = a.cardiothoracic_ratio;
+  const sizes: any[] = Array.isArray(a.finding_sizes) ? a.finding_sizes : [];
+  const zones = a.zone_distribution ?? {};
+  return (
+    <section className="notebookPanel studioCanvasPanel">
+      <div className="notebookHeader">
+        <h2>CXR Measurements</h2>
+        <span className="pill">{ctr ? `CTR ${ctr.ctr}` : "CTR n/a"}</span>
+      </div>
+      <div className="studioCanvasBody">
+        <StudioMetricGrid
+          items={[
+            { label: "Cardiothoracic ratio", value: ctr ? String(ctr.ctr) : "n/a", tone: ctr && ctr.ctr > 0.5 ? "warn" : "good" },
+            { label: "Cardiac width", value: ctr ? `${ctr.cardiac_width_px} px` : "n/a", tone: "neutral" },
+            { label: "Thoracic width", value: ctr ? `${ctr.thoracic_width_px} px` : "n/a", tone: "neutral" },
+            { label: "Findings sized", value: String(sizes.length), tone: "neutral" },
+          ]}
+        />
+        {ctr ? <p className="mutedNote">{ctr.interpretation} (source: {ctr.source}).</p> : null}
+        <article className="miniCard">
+          <h3>Finding sizes &amp; zones</h3>
+          <div className="variantTableWrap summaryStatsTableWrap">
+            <table className="variantTable summaryStatsTable">
+              <thead><tr><th>Label</th><th>Area %</th><th>W×H px</th><th>Location</th></tr></thead>
+              <tbody>
+                {sizes.map((s, i) => (
+                  <tr key={i}>
+                    <td>{s.label}</td>
+                    <td>{((s.area_fraction ?? 0) * 100).toFixed(1)}%</td>
+                    <td>{Math.round(s.width_px)}×{Math.round(s.height_px)}</td>
+                    <td>{s.location_note}</td>
+                  </tr>
+                ))}
+                {sizes.length === 0 ? <tr><td colSpan={4}>No findings to size.</td></tr> : null}
+              </tbody>
+            </table>
+          </div>
+          <p className="mutedNote">Zone distribution: {Object.keys(zones).length ? JSON.stringify(zones) : "n/a"}</p>
+        </article>
+        <WarningListCard warnings={Array.isArray(analysis?.warnings) ? analysis.warnings : []} emptyLabel="No measurement warnings." />
+      </div>
+    </section>
+  );
+}
+
+function CxrQualityCard({
+  analysis,
+  components,
+}: {
+  analysis: any;
+  components: StudioRendererBuilderArgs["components"];
+}) {
+  const { StudioMetricGrid, WarningListCard } = components;
+  const a = analysis?.artifacts?.cxr_quality ?? {};
+  const checks: any[] = Array.isArray(a.checks) ? a.checks : [];
+  const intensity = a.intensity ?? {};
+  return (
+    <section className="notebookPanel studioCanvasPanel">
+      <div className="notebookHeader">
+        <h2>CXR Quality</h2>
+        <span className="pill">{String(a.overall ?? "n/a").toUpperCase()}</span>
+      </div>
+      <div className="studioCanvasBody">
+        <StudioMetricGrid
+          items={[
+            { label: "Dimensions", value: `${a.image_width ?? 0}×${a.image_height ?? 0}`, tone: "neutral" },
+            { label: "Aspect ratio", value: String(a.aspect_ratio ?? "n/a"), tone: "neutral" },
+            { label: "Exposure mean/std", value: `${intensity.mean ?? "?"}/${intensity.std ?? "?"}`, tone: "neutral" },
+            { label: "Looks like a CXR", value: a.looks_like_cxr ? "yes" : "no", tone: a.looks_like_cxr ? "good" : "warn" },
+          ]}
+        />
+        <p className="mutedNote">{String(a.projection_hint ?? "")}</p>
+        <article className="miniCard">
+          <h3>Checks</h3>
+          <div className="variantTableWrap summaryStatsTableWrap">
+            <table className="variantTable summaryStatsTable">
+              <thead><tr><th>Check</th><th>Status</th><th>Detail</th></tr></thead>
+              <tbody>
+                {checks.map((c, i) => (
+                  <tr key={i}><td>{c.check}</td><td>{c.status}</td><td>{c.detail}</td></tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </article>
+        <WarningListCard warnings={Array.isArray(analysis?.warnings) ? analysis.warnings : []} emptyLabel="No quality warnings." />
+      </div>
+    </section>
+  );
+}
+
+function CxrScreeningCard({
+  analysis,
+  components,
+}: {
+  analysis: any;
+  components: StudioRendererBuilderArgs["components"];
+}) {
+  const arts = analysis?.artifacts ?? {};
+  return (
+    <section className="notebookPanel studioCanvasPanel">
+      <div className="notebookHeader">
+        <h2>CXR Screening</h2>
+        <span className="pill">{(arts?.cxr_screening?.stages_ran ?? []).join(" › ") || "no stages"}</span>
+      </div>
+      <div className="studioCanvasBody">
+        {analysis?.draft_answer ? <p className="mutedNote" style={{ whiteSpace: "pre-wrap" as const }}>{analysis.draft_answer}</p> : null}
+      </div>
+      {arts.cxr_quality ? <CxrQualityCard analysis={analysis} components={components} /> : null}
+      {arts.cxr_detection ? <CxrDetectionCard analysis={analysis} components={components} /> : null}
+      {arts.cxr_segmentation ? <CxrSegmentationCard analysis={analysis} components={components} /> : null}
+      {arts.cxr_measurement ? <CxrMeasurementCard analysis={analysis} components={components} /> : null}
+    </section>
+  );
+}
+
 function NiftiReviewCard({
   analysis,
   apiBase,
@@ -829,6 +1110,16 @@ export function buildCustomStudioRendererRegistry({
       imageAnalysis ? (
         <ImageReviewCard analysis={imageAnalysis} components={components} />
       ) : null,
+    cxr_detection: () =>
+      imageAnalysis ? <CxrDetectionCard analysis={imageAnalysis} components={components} /> : null,
+    cxr_segmentation: () =>
+      imageAnalysis ? <CxrSegmentationCard analysis={imageAnalysis} components={components} /> : null,
+    cxr_measurement: () =>
+      imageAnalysis ? <CxrMeasurementCard analysis={imageAnalysis} components={components} /> : null,
+    cxr_quality: () =>
+      imageAnalysis ? <CxrQualityCard analysis={imageAnalysis} components={components} /> : null,
+    cxr_screening: () =>
+      imageAnalysis ? <CxrScreeningCard analysis={imageAnalysis} components={components} /> : null,
     nifti_review: () =>
       niftiAnalysis ? (
         <NiftiReviewCard analysis={niftiAnalysis} apiBase={apiBase} components={components} />

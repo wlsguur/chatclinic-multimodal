@@ -625,6 +625,11 @@ type StudioView =
   | "igv"
   | "annotations"
   | "image_review"
+  | "cxr_detection"
+  | "cxr_segmentation"
+  | "cxr_measurement"
+  | "cxr_quality"
+  | "cxr_screening"
   | "nifti_review"
   | "fhir_browser";
 
@@ -2077,6 +2082,43 @@ export default function Page() {
     }
     const options = parseInlineOptions(remainder);
     setStatus(toolRunningStatus(alias, remainder));
+
+    // --- CXR tool suite (image source type) ---
+    const cxrToolMap: Record<string, { endpoint: string; view: StudioView }> = {
+      detect: { endpoint: "detection", view: "cxr_detection" },
+      cxr_detect: { endpoint: "detection", view: "cxr_detection" },
+      cxrdetect: { endpoint: "detection", view: "cxr_detection" },
+      segment: { endpoint: "segmentation", view: "cxr_segmentation" },
+      cxr_segment: { endpoint: "segmentation", view: "cxr_segmentation" },
+      cxrsegment: { endpoint: "segmentation", view: "cxr_segmentation" },
+      measure: { endpoint: "measurement", view: "cxr_measurement" },
+      cxr_measure: { endpoint: "measurement", view: "cxr_measurement" },
+      ctr: { endpoint: "measurement", view: "cxr_measurement" },
+      quality: { endpoint: "quality", view: "cxr_quality" },
+      cxr_quality: { endpoint: "quality", view: "cxr_quality" },
+      screen: { endpoint: "screening", view: "cxr_screening" },
+      cxr: { endpoint: "screening", view: "cxr_screening" },
+      cxr_screen: { endpoint: "screening", view: "cxr_screening" },
+    };
+    const cxrTool = cxrToolMap[alias];
+    if (cxrTool && preAnalysisSource.source_type === "image") {
+      const body: Record<string, unknown> = { image_path: preAnalysisSource.source_path };
+      if (options.score) body.score = Number(options.score);
+      if (options.targets) body.targets = options.targets;
+      if (options.stages) body.stages = options.stages;
+      const response = await fetch(`${apiBase.replace(/\/$/, "")}/api/v1/${cxrTool.endpoint}/run`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!response.ok) throw new Error(await response.text());
+      const payload = await response.json();
+      setImageAnalysis(payload);
+      activateStudioFromPayload(payload, cxrTool.view, "image");
+      setStatus(toolReadyStatus(alias, remainder));
+      addMessage({ role: "assistant", content: payload?.draft_answer ?? `CXR ${cxrTool.endpoint} complete for \`${preAnalysisSource.file_name}\`.` });
+      return;
+    }
 
     if (alias === "vcfqc" || alias === "vcf_qc") {
       const vcfPath = analysis?.source_vcf_path ?? (preAnalysisSource.source_type === "vcf" ? preAnalysisSource.source_path : null);
