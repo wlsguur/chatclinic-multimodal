@@ -1,0 +1,20 @@
+{
+  "name": "gi_lesion_detector",
+  "entrypoint": "plugins.gi_lesion_detector.logic:execute",
+  "description": "Accuracy-oriented GI/endoscopic lesion detection on still endoscopy frames. Returns 2D bounding boxes with confidence. YOLO11s fine-tuned in-domain on Kvasir-SEG (class 'lesion'); weights committed in-repo. Preferred for single-image, report-grade detection.",
+  "task": "gi_lesion_detection",
+  "modality": "medical-image",
+  "source": "plugin",
+  "approval_required": false,
+  "direct_chat": {
+    "response_kind": "detection_chat",
+    "result_kind": "detection_analysis",
+    "requested_view": "detection_review",
+    "studio": {
+      "renderer": "detection_review"
+    },
+    "source_types": ["image"]
+  },
+  "source_types": ["image"],
+  "initial_for": []
+}

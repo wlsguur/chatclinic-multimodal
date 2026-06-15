@@ -1,0 +1,8 @@
+# On Blackwell (sm_120) GPUs use the CUDA 12.8 torch build:
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
+torch>=2.7
+torchvision>=0.22
+monai>=1.4
+nibabel
+SimpleITK
+numpy<2
