@@ -24,11 +24,6 @@ Upload a source file to get started. Supported formats: DICOM images, PNG/JPG/TI
 - On demand (chest X-ray): Lung Nodule CXR Detection (`lung_nodule_cxr_detector`) — 2D nodule boxes
 - On demand (colonoscopy still): GI Lesion Detection (`gi_lesion_detector`) — accuracy-oriented, in-domain
 - On demand (colonoscopy video/real-time): Polyp Detection (`polyp_colonoscopy_detector`) — real-time
-- `@detect [score=0.5]` — generic CXR detection: bounding boxes + per-finding size/area/quadrant
-- `@segment [targets=lung_left,lung_right,heart]` — CXR segmentation: region masks + area fractions
-- `@measure` — deterministic clinical metrics: cardiothoracic ratio, finding sizes, zone distribution
-- `@quality` — deterministic image QC: exposure, aspect, grayscale, projection hint
-- `@screen [stages=quality,detect,segment,measure]` — orchestrator: chains the CXR tools into one grounded summary
 
 **NIfTI Volume (.nii, .nii.gz)**
 - Auto: NIfTI Review (shape, voxel dimensions, orientation, 3D viewer via Niivue)
@@ -193,13 +188,6 @@ The chat layer should separate general conversation from grounded Studio interpr
 
 - After raw sequencing intake, prefer follow-up suggestions such as FastQC review, samtools review, alignment QC, and file integrity checks.
 - General sequencing questions without grounding triggers should still be answered as normal GPT responses.
-
-### Chest X-ray (image) workflows
-
-- For 2D chest X-ray images, prefer the CXR tools: `@detect` (findings), `@segment` (anatomy regions), `@measure` (cardiothoracic ratio and sizes), `@quality` (pre-analysis QC), and `@screen` to run the full pipeline and ground a combined summary.
-- `@screen` chains `quality → detect → segment → measure` via `run_tool` and degrades gracefully if a stage's model backend has no weights.
-- Detection and segmentation require a model backend: set `CXR_DETECTION_BACKEND`/`CXR_SEGMENTATION_BACKEND` to `torchvision` (+ `_WEIGHTS`) or `remote` (+ `_API_URL`/`_API_KEY`); the default `fallback` produces deterministic placeholders so the pipeline runs without weights.
-- `@measure` and `@quality` are deterministic and need no weights.
 
 ### Summary statistics workflows
 

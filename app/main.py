@@ -66,16 +66,6 @@ from app.models import (
     MultimodalChatRequest,
     MultimodalChatResponse,
     SourceFromPathRequest,
-    CxrDetectionRequest,
-    CxrDetectionResponse,
-    CxrSegmentationRequest,
-    CxrSegmentationResponse,
-    CxrMeasurementRequest,
-    CxrMeasurementResponse,
-    CxrQualityRequest,
-    CxrQualityResponse,
-    CxrScreeningRequest,
-    CxrScreeningResponse,
     ToolInfo,
     ToolRunRequest,
     ToolRunResponse,
@@ -728,32 +718,6 @@ def run_cmplot(request: CmplotAssociationRequest) -> RPlotResponse:
 @app.post("/api/v1/qqman/run", response_model=RPlotResponse)
 def run_qqman(request: QqmanAssociationRequest) -> RPlotResponse:
     return _run_registered_tool_model("qqman", request.model_dump(), RPlotResponse)
-
-
-# --- CXR tool suite (image source type) ---
-@app.post("/api/v1/detection/run", response_model=CxrDetectionResponse)
-def run_cxr_detection(request: CxrDetectionRequest) -> CxrDetectionResponse:
-    return _run_registered_tool_model("detect", request.model_dump(), CxrDetectionResponse, result_key="analysis")
-
-
-@app.post("/api/v1/segmentation/run", response_model=CxrSegmentationResponse)
-def run_cxr_segmentation(request: CxrSegmentationRequest) -> CxrSegmentationResponse:
-    return _run_registered_tool_model("segment", request.model_dump(), CxrSegmentationResponse, result_key="analysis")
-
-
-@app.post("/api/v1/measurement/run", response_model=CxrMeasurementResponse)
-def run_cxr_measurement(request: CxrMeasurementRequest) -> CxrMeasurementResponse:
-    return _run_registered_tool_model("measure", request.model_dump(), CxrMeasurementResponse, result_key="analysis")
-
-
-@app.post("/api/v1/quality/run", response_model=CxrQualityResponse)
-def run_cxr_quality(request: CxrQualityRequest) -> CxrQualityResponse:
-    return _run_registered_tool_model("quality", request.model_dump(), CxrQualityResponse, result_key="analysis")
-
-
-@app.post("/api/v1/screening/run", response_model=CxrScreeningResponse)
-def run_cxr_screening(request: CxrScreeningRequest) -> CxrScreeningResponse:
-    return _run_registered_tool_model("screen", request.model_dump(), CxrScreeningResponse, result_key="analysis")
 
 
 @app.post("/api/v1/analysis/upload", response_model=AnalysisResponse)

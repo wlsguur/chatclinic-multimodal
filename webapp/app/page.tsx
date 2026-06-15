@@ -625,11 +625,7 @@ type StudioView =
   | "igv"
   | "annotations"
   | "image_review"
-  | "cxr_detection"
-  | "cxr_segmentation"
-  | "cxr_measurement"
-  | "cxr_quality"
-  | "cxr_screening"
+  | "detection_review"
   | "nifti_review"
   | "fhir_browser";
 
@@ -2083,40 +2079,48 @@ export default function Page() {
     const options = parseInlineOptions(remainder);
     setStatus(toolRunningStatus(alias, remainder));
 
-    // --- CXR tool suite (image source type) ---
-    const cxrToolMap: Record<string, { endpoint: string; view: StudioView }> = {
-      detect: { endpoint: "detection", view: "cxr_detection" },
-      cxr_detect: { endpoint: "detection", view: "cxr_detection" },
-      cxrdetect: { endpoint: "detection", view: "cxr_detection" },
-      segment: { endpoint: "segmentation", view: "cxr_segmentation" },
-      cxr_segment: { endpoint: "segmentation", view: "cxr_segmentation" },
-      cxrsegment: { endpoint: "segmentation", view: "cxr_segmentation" },
-      measure: { endpoint: "measurement", view: "cxr_measurement" },
-      cxr_measure: { endpoint: "measurement", view: "cxr_measurement" },
-      ctr: { endpoint: "measurement", view: "cxr_measurement" },
-      quality: { endpoint: "quality", view: "cxr_quality" },
-      cxr_quality: { endpoint: "quality", view: "cxr_quality" },
-      screen: { endpoint: "screening", view: "cxr_screening" },
-      cxr: { endpoint: "screening", view: "cxr_screening" },
-      cxr_screen: { endpoint: "screening", view: "cxr_screening" },
+    // --- hk_4_tools detectors (lung nodule CT/CXR, polyp, GI lesion) ---
+    const detectorMap: Record<string, { tool: string; sources: string[] }> = {
+      lung_nodule_cxr_detector: { tool: "lung_nodule_cxr_detector", sources: ["image"] },
+      lung_nodule_cxr: { tool: "lung_nodule_cxr_detector", sources: ["image"] },
+      gi_lesion_detector: { tool: "gi_lesion_detector", sources: ["image"] },
+      gi_lesion: { tool: "gi_lesion_detector", sources: ["image"] },
+      polyp_colonoscopy_detector: { tool: "polyp_colonoscopy_detector", sources: ["image"] },
+      polyp: { tool: "polyp_colonoscopy_detector", sources: ["image"] },
+      lung_nodule_ct_detector: { tool: "lung_nodule_ct_detector", sources: ["dicom", "nifti"] },
+      lung_nodule_ct: { tool: "lung_nodule_ct_detector", sources: ["dicom", "nifti"] },
     };
-    const cxrTool = cxrToolMap[alias];
-    if (cxrTool && preAnalysisSource.source_type === "image") {
-      const body: Record<string, unknown> = { image_path: preAnalysisSource.source_path };
-      if (options.score) body.score = Number(options.score);
-      if (options.targets) body.targets = options.targets;
-      if (options.stages) body.stages = options.stages;
-      const response = await fetch(`${apiBase.replace(/\/$/, "")}/api/v1/${cxrTool.endpoint}/run`, {
+    const detector = detectorMap[alias];
+    if (detector && detector.sources.includes(preAnalysisSource.source_type)) {
+      const response = await fetch(`${apiBase.replace(/\/$/, "")}/api/v1/tools/${detector.tool}/run`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ payload: { image_path: preAnalysisSource.source_path } }),
       });
       if (!response.ok) throw new Error(await response.text());
-      const payload = await response.json();
-      setImageAnalysis(payload);
-      activateStudioFromPayload(payload, cxrTool.view, "image");
+      const toolResult = (await response.json()) as ToolRunResponse;
+      const result = toolResult.result ?? {};
+      const dr = result.artifacts?.detection_review;
+      // merge the detection artifact into the active source analysis so the
+      // detection_review card can overlay boxes on the existing image preview
+      const mergeDetection = (prev: any) => ({
+        ...(prev ?? {}),
+        requested_view: "detection_review",
+        studio: { renderer: "detection_review" },
+        draft_answer: result.draft_answer ?? prev?.draft_answer,
+        detection_tool: result.tool,
+        artifacts: { ...((prev ?? {}).artifacts ?? {}), detection_review: dr, detection_provenance: result.provenance },
+      });
+      if (preAnalysisSource.source_type === "image") setImageAnalysis(mergeDetection as any);
+      else if (preAnalysisSource.source_type === "dicom") setDicomAnalysis(mergeDetection as any);
+      else setNiftiAnalysis(mergeDetection as any);
+      activateStudioFromPayload(
+        { requested_view: "detection_review", studio: { renderer: "detection_review" } },
+        "detection_review",
+        preAnalysisSource.source_type,
+      );
       setStatus(toolReadyStatus(alias, remainder));
-      addMessage({ role: "assistant", content: payload?.draft_answer ?? `CXR ${cxrTool.endpoint} complete for \`${preAnalysisSource.file_name}\`.` });
+      addMessage({ role: "assistant", content: result.draft_answer ?? `${detector.tool} complete for \`${preAnalysisSource.file_name}\`.` });
       return;
     }
 
