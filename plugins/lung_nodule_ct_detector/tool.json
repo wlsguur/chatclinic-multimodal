@@ -1,0 +1,20 @@
+{
+  "name": "lung_nodule_ct_detector",
+  "entrypoint": "plugins.lung_nodule_ct_detector.logic:execute",
+  "description": "Detect pulmonary nodule candidates in 3D chest CT (DICOM/NIfTI) and return 3D bounding boxes with confidence. Wraps the MONAI 'lung_nodule_ct_detection' bundle (3D RetinaNet, ResNet50-FPN, LUNA16).",
+  "task": "lung_nodule_ct_detection",
+  "modality": "medical-image",
+  "source": "plugin",
+  "approval_required": true,
+  "direct_chat": {
+    "response_kind": "detection_chat",
+    "result_kind": "detection_analysis",
+    "requested_view": "detection_review",
+    "studio": {
+      "renderer": "detection_review"
+    },
+    "source_types": ["dicom", "nifti"]
+  },
+  "source_types": ["dicom", "nifti"],
+  "initial_for": []
+}

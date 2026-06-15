@@ -1,0 +1,20 @@
+{
+  "name": "polyp_colonoscopy_detector",
+  "entrypoint": "plugins.polyp_colonoscopy_detector.logic:execute",
+  "description": "Real-time colon polyp detection on colonoscopy frames/video. Returns 2D bounding boxes with confidence. Wraps YOLO-OB (anchor-free ObjectBox head, SUN-pretrained). Optimized for high frame-rate / streaming triage.",
+  "task": "polyp_detection",
+  "modality": "medical-image",
+  "source": "plugin",
+  "approval_required": false,
+  "direct_chat": {
+    "response_kind": "detection_chat",
+    "result_kind": "detection_analysis",
+    "requested_view": "detection_review",
+    "studio": {
+      "renderer": "detection_review"
+    },
+    "source_types": ["image"]
+  },
+  "source_types": ["image"],
+  "initial_for": []
+}

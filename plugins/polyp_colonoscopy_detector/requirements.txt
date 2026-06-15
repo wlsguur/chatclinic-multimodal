@@ -1,0 +1,13 @@
+# On Blackwell (sm_120) GPUs use the CUDA 12.8 torch build:
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
+# YOLO-OB repo code (models/, utils/) is fetched by download_weights.sh into ./yolo_ob_repo.
+torch>=2.7
+torchvision>=0.22
+numpy<2
+pillow
+opencv-python
+einops
+gdown
+matplotlib
+tqdm
+pyyaml

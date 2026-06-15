@@ -1,0 +1,20 @@
+{
+  "name": "lung_nodule_cxr_detector",
+  "entrypoint": "plugins.lung_nodule_cxr_detector.logic:execute",
+  "description": "Detect lung nodules in 2D frontal chest X-rays (raster image or .mha) and return 2D bounding boxes with likelihood. Wraps the NODE21 detection baseline (Faster R-CNN ResNet50-FPN).",
+  "task": "lung_nodule_cxr_detection",
+  "modality": "medical-image",
+  "source": "plugin",
+  "approval_required": false,
+  "direct_chat": {
+    "response_kind": "detection_chat",
+    "result_kind": "detection_analysis",
+    "requested_view": "detection_review",
+    "studio": {
+      "renderer": "detection_review"
+    },
+    "source_types": ["image"]
+  },
+  "source_types": ["image"],
+  "initial_for": []
+}

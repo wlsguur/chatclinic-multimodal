@@ -1,0 +1,7 @@
+# On Blackwell (sm_120) GPUs use the CUDA 12.8 torch build:
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
+# Ultralytics is AGPL-3.0 — review licensing before any closed/commercial deployment.
+torch>=2.7
+torchvision>=0.22
+ultralytics>=8.3
+numpy<2

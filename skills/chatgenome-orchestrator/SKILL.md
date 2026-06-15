@@ -17,12 +17,17 @@ Upload a source file to get started. Supported formats: DICOM images, PNG/JPG/TI
 
 **DICOM**
 - Auto: DICOM Review (metadata, series summary, preview)
+- On demand: Lung Nodule CT Detection (`lung_nodule_ct_detector`) — 3D nodule boxes; approval required (GPU/runtime)
 
 **PNG / JPG / TIFF Image**
 - Auto: Image Review (metadata, EXIF, thumbnail)
+- On demand (chest X-ray): Lung Nodule CXR Detection (`lung_nodule_cxr_detector`) — 2D nodule boxes
+- On demand (colonoscopy still): GI Lesion Detection (`gi_lesion_detector`) — accuracy-oriented, in-domain
+- On demand (colonoscopy video/real-time): Polyp Detection (`polyp_colonoscopy_detector`) — real-time
 
 **NIfTI Volume (.nii, .nii.gz)**
 - Auto: NIfTI Review (shape, voxel dimensions, orientation, 3D viewer via Niivue)
+- On demand: Lung Nodule CT Detection (`lung_nodule_ct_detector`) — 3D nodule boxes; approval required (GPU/runtime)
 
 **FHIR Bundle**
 - Auto: FHIR Browser (patient, medications, labs, care team)
@@ -190,6 +195,30 @@ The chat layer should separate general conversation from grounded Studio interpr
 - Do not automatically generate follow-up plots unless the workflow explicitly requires it or the user explicitly asks for them.
 - `@skill prs_prep` should prepare build check and harmonization readiness before any PLINK score-file generation step.
 - General statistical or genetics questions without grounding triggers should be answered as normal GPT responses.
+
+### Medical-image detection workflows (lung nodules + GI lesions)
+
+Applies when the user intent is to **detect / find / screen / localize** an abnormality on a medical
+image. Resolve top-to-bottom; stop at the first matching route.
+
+1. **Source family.** DICOM **or** NIfTI chest CT volume → `lung_nodule_ct_detector`. Raster image → step 2.
+   (A 3D volume only routes to the CT tool; the 2D detectors never run on a volume.)
+2. **Anatomical region of the raster image** (use the `image_review_tool` modality hint + the user's wording).
+   Frontal chest X-ray → `lung_nodule_cxr_detector`. Colonoscopy / lower-GI endoscopy frame → step 3.
+   Region unsupported/unclear → run no detector; ask the user to confirm the region.
+3. **Colonoscopy: choose by clinical context** (same frame, so context decides, not source type).
+   Single still frame / accuracy / report-grade → `gi_lesion_detector` (in-domain mAP@50 0.91).
+   Video / live stream / many frames / real-time triage → `polyp_colonoscopy_detector` (67.7 FPS).
+   Tie-break: default to `gi_lesion_detector`; switch to `polyp_colonoscopy_detector` when the request
+   mentions video / stream / real-time / frame-rate, or when latency matters more than accuracy.
+4. **Host/runtime gate.** `lung_nodule_ct_detector` needs ~9 GB GPU and ~8 s/volume → run after approval;
+   on a CPU-only host warn it will be slow before running. The three 2D detectors are CPU-friendly.
+5. **Approval.** `lung_nodule_ct_detector` requires approval (GPU/runtime cost); the 2D detectors do not.
+   All detection outputs are decision-support shown for clinician review — never presented as a diagnosis.
+
+Ordering: for raster images run `image_review_tool` first (intake + modality hint), then the selected
+detector. Each detector emits a `detection_review` artifact (2D/3D bounding boxes) for Studio.
+Full rationale + per-tool fields: `submissions/team_detection/skill_update/`.
 
 ## Interpretation policy
 
