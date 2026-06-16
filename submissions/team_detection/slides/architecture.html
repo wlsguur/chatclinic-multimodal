@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ChatClinic Detection Suite — Architecture</title>
+<style>
+  :root{
+    --bg:#0e1626; --bg2:#13203a; --card:#172b46; --ink:#e8eef7; --muted:#9fb0c8;
+    --accent:#37d3c3; --accent2:#5b9dff; --warn:#ffb454; --bad:#ff6b6b; --good:#46d39a;
+    --line:#27374f; --code:#0a1120;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:#070d18;color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .deck{height:100vh;width:100vw;overflow:hidden;position:relative}
+  .slide{position:absolute;inset:0;padding:5vh 7vw;opacity:0;visibility:hidden;
+    transition:opacity .35s ease;overflow:auto;
+    background:radial-gradient(1200px 700px at 80% -10%,#16264a 0%,#0e1626 45%,#0a111f 100%)}
+  .slide.active{opacity:1;visibility:visible}
+  h1{font-size:3.0rem;line-height:1.1;margin:.2em 0;letter-spacing:-.5px}
+  h2{font-size:2.0rem;margin:.1em 0 .6em;color:#fff;letter-spacing:-.3px}
+  h2 .num{color:var(--accent);font-size:1.1rem;font-weight:700;margin-right:.6rem;
+    border:1px solid var(--accent);border-radius:6px;padding:.05em .5em;vertical-align:middle}
+  h3{font-size:1.15rem;margin:.2em 0;color:var(--accent)}
+  p,li{font-size:1.05rem;line-height:1.55;color:var(--ink)}
+  .muted{color:var(--muted)}
+  .accent{color:var(--accent)} .accent2{color:var(--accent2)}
+  .warn{color:var(--warn)} .bad{color:var(--bad)} .good{color:var(--good)}
+  code,.mono{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:.92em}
+  .pill{display:inline-block;padding:.12em .6em;border-radius:999px;border:1px solid var(--line);
+    background:#101c33;color:var(--muted);font-size:.8rem;margin:.15em .25em .15em 0}
+  .grid{display:grid;gap:1rem}
+  .g2{grid-template-columns:1fr 1fr} .g3{grid-template-columns:1fr 1fr 1fr} .g4{grid-template-columns:repeat(4,1fr)}
+  .card{background:linear-gradient(180deg,#13213c,#101a30);border:1px solid var(--line);
+    border-radius:14px;padding:1rem 1.15rem}
+  .card h3{margin-top:0}
+  .kv{display:flex;gap:.5rem;font-size:.95rem;margin:.15em 0}
+  .kv b{color:#fff;min-width:84px;display:inline-block}
+  pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:.9rem 1rem;
+    overflow:auto;font-size:.86rem;line-height:1.45;color:#cfe6ff}
+  pre .k{color:#7fd4ff} pre .s{color:#9be59b} pre .c{color:#6f86a8}
+  table{border-collapse:collapse;width:100%;font-size:.92rem}
+  th,td{border:1px solid var(--line);padding:.5rem .6rem;text-align:left;vertical-align:top}
+  th{background:#16243f;color:#fff} tr:nth-child(even) td{background:#0f1a30}
+  .flow{display:flex;align-items:stretch;gap:.5rem;flex-wrap:wrap;margin:.6rem 0}
+  .node{flex:1;min-width:120px;background:#13213c;border:1px solid var(--line);border-radius:10px;
+    padding:.6rem .7rem;font-size:.9rem}
+  .node b{color:var(--accent)}
+  .arrow{display:flex;align-items:center;color:var(--accent);font-size:1.4rem;font-weight:700}
+  .lead{font-size:1.25rem;color:var(--muted);max-width:60ch}
+  .tag{font-size:.78rem;color:var(--bg2)}
+  .hl{background:#0f2230;border-left:3px solid var(--accent);padding:.5rem .8rem;border-radius:0 8px 8px 0;margin:.5rem 0}
+  .hl.warn{border-left-color:var(--warn);background:#231a0d}
+  .footer{position:fixed;bottom:14px;left:0;right:0;display:flex;justify-content:space-between;
+    align-items:center;padding:0 24px;font-size:.8rem;color:var(--muted);pointer-events:none}
+  .dots{display:flex;gap:6px;pointer-events:auto}
+  .dot{width:8px;height:8px;border-radius:50%;background:#2a3a55;cursor:pointer;border:none}
+  .dot.on{background:var(--accent);transform:scale(1.25)}
+  .bar{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--accent),var(--accent2));z-index:9}
+  .nav{position:fixed;top:50%;transform:translateY(-50%);background:#13213c88;border:1px solid var(--line);
+    color:#fff;width:42px;height:42px;border-radius:50%;cursor:pointer;font-size:1.3rem;z-index:9}
+  .nav:hover{background:#1d3a5c}
+  #prev{left:14px} #next{right:14px}
+  .big{font-size:2.6rem;font-weight:800;color:#fff;letter-spacing:-1px}
+  .small{font-size:.82rem}
+  ul{margin:.3em 0 .3em 0;padding-left:1.2em} li{margin:.18em 0}
+</style>
+</head>
+<body>
+<div class="bar" id="bar"></div>
+<div class="deck" id="deck">
+
+  <!-- 1 TITLE -->
+  <section class="slide active">
+    <span class="pill">KAIST AI619 · Spring 2026 · Detection topic</span>
+    <h1>ChatClinic <span class="accent">Detection Suite</span></h1>
+    <p class="lead">Four medical-image detection tools + one orchestration policy, integrated into the
+      ChatClinic multimodal platform (FastAPI + Next.js + plugin runner + Studio + Skill).</p>
+    <div class="grid g4" style="margin-top:1.4rem">
+      <div class="card"><h3>Lung — CT</h3><p class="small muted">MONAI 3D RetinaNet (LUNA16)</p></div>
+      <div class="card"><h3>Lung — CXR</h3><p class="small muted">NODE21 Faster R-CNN</p></div>
+      <div class="card"><h3>Polyp</h3><p class="small muted">YOLO-OB (real-time)</p></div>
+      <div class="card"><h3>GI lesion</h3><p class="small muted">YOLO11s <span class="good">fine-tuned</span></p></div>
+    </div>
+    <p class="muted small" style="margin-top:1.4rem">branch <code>team-detection</code> · 3 ready-to-use models + 1 fine-tuned · all GPU-verified</p>
+  </section>
+
+  <!-- 2 BIG PICTURE -->
+  <section class="slide">
+    <h2><span class="num">01</span>The platform, and what we added</h2>
+    <div class="grid g2">
+      <div class="card">
+        <h3>ChatClinic platform (given)</h3>
+        <ul>
+          <li><b>FastAPI backend</b> — upload, source auto-detection, tool runner, chat</li>
+          <li><b>Next.js frontend</b> — 3-column workspace: Sources · Chat · Studio</li>
+          <li><b>Plugin runner</b> — discovers <code>plugins/*/tool.json</code>, calls <code>execute(payload)</code></li>
+          <li><b>Studio</b> — renderer registry draws each tool's card</li>
+          <li><b>Skill</b> — <code>SKILL.md</code> orchestration policy (read at startup)</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Our contribution</h3>
+        <ul>
+          <li><span class="accent">4 detection plugins</span> under <code>plugins/&lt;tool&gt;/</code></li>
+          <li>A <span class="accent">detection routing block</span> added to <code>SKILL.md</code></li>
+          <li>A shared <code>detection_review</code> Studio renderer (2D box overlay / 3D table)</li>
+          <li>Weights policy: 3 public via <code>download_weights.sh</code>, 1 fine-tuned committed</li>
+        </ul>
+        <div class="hl small">A student submission = <b>tool plugins + a Skill patch</b> — never a platform rewrite.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 DATA FLOW -->
+  <section class="slide">
+    <h2><span class="num">02</span>End-to-end data flow</h2>
+    <div class="flow">
+      <div class="node"><b>Upload</b><br><span class="small muted">file → <code>/api/v1/source/upload</code></span></div>
+      <div class="arrow">→</div>
+      <div class="node"><b>Detect source</b><br><span class="small muted">9 families by suffix<br><code>source_registry.py</code></span></div>
+      <div class="arrow">→</div>
+      <div class="node"><b>Bootstrap tool</b><br><span class="small muted"><code>initial_for</code> auto-runs<br>(e.g. image/nifti/dicom review)</span></div>
+    </div>
+    <div class="flow">
+      <div class="node"><b>On-demand</b><br><span class="small muted">user types <code>@gi_lesion</code> in chat<br>→ <code>/api/v1/tools/{tool}/run</code></span></div>
+      <div class="arrow">→</div>
+      <div class="node"><b>Tool runner</b><br><span class="small muted"><code>load_plugin_execute</code><br><code>execute(payload)→dict</code></span></div>
+      <div class="arrow">→</div>
+      <div class="node"><b>Artifacts</b><br><span class="small muted"><code>detections</code> + <code>detection_review</code><br>+ <code>provenance</code></span></div>
+      <div class="arrow">→</div>
+      <div class="node"><b>Studio</b><br><span class="small muted"><code>detection_review</code> renderer<br>boxes on the image</span></div>
+    </div>
+    <div class="hl small"><b>Two trigger paths:</b> intake tools run automatically on upload (<code>initial_for</code>);
+      our detectors are <b>on-demand</b> (<code>initial_for: []</code>) — invoked by an <code>@alias</code> in chat,
+      or by the Skill's routing decision.</div>
+    <p class="small muted">Backend anchors: <code>app/main.py</code> (endpoints) · <code>services/source_registry.py</code> ·
+      <code>services/tool_runner.py</code> · <code>services/plugin_runtime.py</code></p>
+  </section>
+
+  <!-- 4 PLUGIN CONTRACT -->
+  <section class="slide">
+    <h2><span class="num">03</span>The plugin contract</h2>
+    <div class="grid g2">
+      <div>
+        <h3><code>tool.json</code> (manifest)</h3>
+        <pre><span class="k">"name"</span>: <span class="s">"gi_lesion_detector"</span>,
+<span class="k">"entrypoint"</span>: <span class="s">"plugins.gi_lesion_detector.logic:execute"</span>,
+<span class="k">"task"</span>: <span class="s">"gi_lesion_detection"</span>,
+<span class="k">"modality"</span>: <span class="s">"medical-image"</span>,
+<span class="k">"approval_required"</span>: false,
+<span class="k">"source_types"</span>: [<span class="s">"image"</span>],
+<span class="k">"initial_for"</span>: [],          <span class="c">// on-demand</span>
+<span class="k">"direct_chat"</span>: {
+   <span class="k">"requested_view"</span>: <span class="s">"detection_review"</span>,
+   <span class="k">"studio"</span>: {<span class="k">"renderer"</span>: <span class="s">"detection_review"</span>}
+}</pre>
+      </div>
+      <div>
+        <h3><code>logic.py</code> → <code>execute(payload)→dict</code></h3>
+        <pre><span class="k">def</span> execute(payload: dict) -> dict:
+    image_path = payload[<span class="s">"image_path"</span>]
+    <span class="c"># lazy-load model, run inference</span>
+    <span class="k">return</span> {
+      <span class="k">"tool"</span>, <span class="k">"task"</span>, <span class="k">"summary"</span>,
+      <span class="k">"draft_answer"</span>,
+      <span class="k">"detections"</span>: [{box, score, label}],
+      <span class="k">"artifacts"</span>: {<span class="k">"detection_review"</span>: {...}},
+      <span class="k">"studio_cards"</span>: [...],
+      <span class="k">"provenance"</span>: {model, device, runtime},
+      <span class="k">"used_tools"</span>: [...] }</pre>
+        <div class="hl small">Same shape as built-in tools (image/nifti review) → the runner serializes it and
+          the response layer carries <code>artifacts</code> + <code>studio_cards</code> straight to the UI.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 FOUR TOOLS TABLE -->
+  <section class="slide">
+    <h2><span class="num">04</span>The four tools at a glance</h2>
+    <table>
+      <tr><th>Tool</th><th>Model</th><th>Input (source)</th><th>Output</th><th>Measured (GPU)</th><th>Weights</th><th>License</th></tr>
+      <tr><td><b>lung_nodule_ct</b></td><td>MONAI 3D RetinaNet (LUNA16)</td><td>3D CT — <span class="accent">dicom / nifti</span></td><td>3D boxes + score</td><td>~7.6 s/vol · 8.8 GB</td><td>script ~80 MB</td><td>Apache-2.0</td></tr>
+      <tr><td><b>lung_nodule_cxr</b></td><td>NODE21 Faster R-CNN</td><td>chest X-ray — <span class="accent">image</span></td><td>2D boxes + likelihood</td><td>~15 ms/img · 1.2 GB</td><td>script ~158 MB</td><td>Apache/MIT</td></tr>
+      <tr><td><b>polyp_colonoscopy</b></td><td>YOLO-OB (SUN)</td><td>colonoscopy — <span class="accent">image</span></td><td>2D boxes + conf</td><td>67.7 FPS · &lt;1 GB</td><td>script ~300 MB</td><td>Apache-2.0</td></tr>
+      <tr><td><b>gi_lesion</b></td><td>YOLO11s <span class="good">fine-tuned</span> (Kvasir-SEG)</td><td>endoscopy still — <span class="accent">image</span></td><td>2D boxes + conf</td><td>~1 ms/img</td><td><span class="good">committed 19 MB</span></td><td>AGPL-3.0</td></tr>
+    </table>
+    <div class="hl small">Three are <b>ready-to-use public</b> pretrained models (no training); <b>gi_lesion</b> is the team's
+      <b>fine-tuned</b> tool — its weights have no public source, so they ship in-repo.</div>
+  </section>
+
+  <!-- 6 PER-TOOL DETAIL -->
+  <section class="slide">
+    <h2><span class="num">05</span>Per-tool detail</h2>
+    <div class="grid g2">
+      <div class="card"><h3>lung_nodule_ct_detector</h3>
+        <div class="kv"><b>Model</b><span>3D RetinaNet, ResNet50-FPN, Focal Loss (MONAI bundle, LUNA16)</span></div>
+        <div class="kv"><b>Why</b><span>volumetric — a 2D detector cannot run on a CT volume</span></div>
+        <div class="kv"><b>Verified</b><span>box centers 0.7–0.9 mm from GT (3/3); bundle mAP 0.852</span></div>
+        <div class="kv"><b>Note</b><span class="warn">approval_required (≈9 GB GPU, ~8 s)</span></div>
+      </div>
+      <div class="card"><h3>lung_nodule_cxr_detector</h3>
+        <div class="kv"><b>Model</b><span>Faster R-CNN ResNet50-FPN (NODE21 baseline)</span></div>
+        <div class="kv"><b>I/O</b><span>frontal CXR → 2D boxes + likelihood</span></div>
+        <div class="kv"><b>Verified</b><span>reproduces NODE21 reference output exactly (IoU 1.0)</span></div>
+        <div class="kv"><b>Note</b><span>2D, CPU-friendly; no approval</span></div>
+      </div>
+      <div class="card"><h3>polyp_colonoscopy_detector</h3>
+        <div class="kv"><b>Model</b><span>YOLO-OB anchor-free ObjectBox head (SUN-pretrained)</span></div>
+        <div class="kv"><b>Role</b><span>real-time / video / streaming triage (67.7 FPS)</span></div>
+        <div class="kv"><b>Verified</b><span>cross-dataset recall 0.73 / precision 0.87 (no fine-tune)</span></div>
+      </div>
+      <div class="card"><h3>gi_lesion_detector <span class="good">(fine-tuned)</span></h3>
+        <div class="kv"><b>Model</b><span>YOLO11s fine-tuned on Kvasir-SEG (class 'lesion')</span></div>
+        <div class="kv"><b>Role</b><span>still-image, accuracy / report-grade</span></div>
+        <div class="kv"><b>Verified</b><span class="good">val mAP@50 0.908 · mAP@50-95 0.735</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 HOW RUN (BACKEND) -->
+  <section class="slide">
+    <h2><span class="num">06</span>How a tool actually runs (backend)</h2>
+    <div class="grid g2">
+      <div>
+        <h3>Discovery &amp; invocation</h3>
+        <ul>
+          <li><code>discover_tools()</code> scans every <code>plugins/*/tool.json</code> at startup</li>
+          <li><code>run_tool(name, payload)</code> reads <code>entrypoint</code> →
+            <code>load_plugin_execute("module:function")</code> → calls <code>execute(payload)</code></li>
+          <li>payload = <code>{ "image_path": &lt;uploaded source path&gt; }</code> (+ optional knobs)</li>
+          <li>Fallback: if no entrypoint, a <code>run.py --input/--output</code> subprocess</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Selection &amp; approval</h3>
+        <ul>
+          <li><b>Deterministic:</b> <code>initial_for</code> tools auto-run on upload (intake review)</li>
+          <li><b>On-demand:</b> our detectors fire via <code>@alias</code> in chat
+            (frontend maps alias → <code>/api/v1/tools/{tool}/run</code>)</li>
+          <li><b>LLM:</b> grounded chat ($studio …) uses OpenAI <code>gpt-5-mini</code> over the Studio state</li>
+          <li><code>approval_required</code> is surfaced in the tool registry for the UI to gate the CT tool</li>
+        </ul>
+      </div>
+    </div>
+    <div class="hl small">Policy lives in the <b>Skill</b>; invocation lives in the <b>runtime</b>. The two are kept separate by design.</div>
+  </section>
+
+  <!-- 8 ORCHESTRATION -->
+  <section class="slide">
+    <h2><span class="num">07</span>Orchestration — the Skill routing</h2>
+    <p class="muted small">Added to <code>skills/chatgenome-orchestrator/SKILL.md</code>. Resolve top-to-bottom; stop at first match.</p>
+    <div class="grid g2">
+      <div class="card">
+        <h3>The 5-step decision</h3>
+        <ol>
+          <li><b>Source family</b> — DICOM/NIfTI CT → <code>lung_nodule_ct</code>; raster → step 2</li>
+          <li><b>Region</b> (image_review hint) — chest X-ray → <code>lung_nodule_cxr</code>; colonoscopy → step 3</li>
+          <li><b>Clinical context</b> — still/accuracy → <code>gi_lesion</code>; video/real-time → <code>polyp</code></li>
+          <li><b>Host/runtime</b> — CT needs GPU+approval; 2D tools CPU-friendly</li>
+          <li><b>Approval</b> — only CT; all outputs are decision-support, never a diagnosis</li>
+        </ol>
+      </div>
+      <div class="card">
+        <h3>Why it scores</h3>
+        <ul>
+          <li>Same colonoscopy frame → choice depends on <b>context (accuracy vs latency)</b>, not source type</li>
+          <li>Explicit <b>ordering</b> (image_review → detector) &amp; <b>dependency</b></li>
+          <li><b>Approval</b> rule is cost-based and justified</li>
+          <li>Each tool yields a <b>complementary</b> artifact, not a duplicate</li>
+        </ul>
+        <div class="hl small">Multi-tool + a routing policy &gt; a single isolated tool — the rubric's bonus criterion.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9 FRONTEND / STUDIO -->
+  <section class="slide">
+    <h2><span class="num">08</span>Frontend — the <code>detection_review</code> renderer</h2>
+    <div class="grid g2">
+      <div>
+        <h3>From tool result to UI</h3>
+        <ul>
+          <li><code>runDetectionTool()</code> maps aliases (<code>lung_nodule_ct/cxr</code>, <code>polyp</code>, <code>gi_lesion</code>) → the tool, filtered by source type</li>
+          <li>Merges <code>result.artifacts.detection_review</code> + <code>provenance</code> into the active analysis</li>
+          <li>Activates the <code>detection_review</code> Studio view</li>
+        </ul>
+        <h3>The card</h3>
+        <ul>
+          <li><b>2D</b> (image): red bounding-box overlay on the preview, label + confidence %</li>
+          <li><b>3D</b> (CT/NIfTI): voxel-box table (no 2D overlay)</li>
+          <li>Model / runtime / device line + "decision-support, not a diagnosis" footer</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Registry</h3>
+        <pre><span class="c">// studioRenderers.tsx</span>
+detection_review: {
+  requestedViews: [<span class="s">"detection_review"</span>],
+  resultKinds: [<span class="s">"detection_analysis"</span>]
+}
+
+<span class="c">// customStudioRenderers.tsx</span>
+DetectionReviewCard()  <span class="c">// 2D overlay / 3D table</span>
+  normalizes box_xyxy · box_xyxy_mm
+            · box_xyzxyz_voxel</pre>
+        <div class="hl small">One unified renderer serves all four detectors across image, DICOM and NIfTI sources.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10 VERIFICATION -->
+  <section class="slide">
+    <h2><span class="num">09</span>Verification (measured on GPU)</h2>
+    <table>
+      <tr><th>Tool</th><th>Ran on GPU?</th><th>Latency / mem</th><th>Quality signal</th></tr>
+      <tr><td>lung_nodule_ct</td><td class="good">yes</td><td>~7.6 s/vol · 8.8 GB</td><td>3/3 nodules, centers 0.7–0.9 mm from GT; bundle mAP 0.852</td></tr>
+      <tr><td>lung_nodule_cxr</td><td class="good">yes</td><td>~15 ms/img · 1.2 GB</td><td>reproduces NODE21 reference output exactly (29/29, IoU 1.0)</td></tr>
+      <tr><td>polyp_colonoscopy</td><td class="good">yes</td><td>67.7 FPS · &lt;1 GB</td><td>cross-dataset recall 0.73 / precision 0.87 (lower bound)</td></tr>
+      <tr><td>gi_lesion (fine-tuned)</td><td class="good">yes</td><td>~1 ms/img</td><td class="good">in-domain mAP@50 0.908 · mAP@50-95 0.735</td></tr>
+    </table>
+    <p class="small muted">Each plugin's <code>execute()</code> was run end-to-end via the platform package path and returns valid detection dicts.
+      CT/CXR/polyp figures are functional + sanity checks; the bundle mAP and the fine-tuned mAP are reported metrics.</p>
+  </section>
+
+  <!-- 11 WEIGHTS / DEPLOY -->
+  <section class="slide">
+    <h2><span class="num">10</span>Weights &amp; deployment</h2>
+    <div class="grid g2">
+      <div class="card">
+        <h3>Weights policy</h3>
+        <ul>
+          <li><b>CT / CXR / polyp</b> — public pretrained, fetched by <code>plugins/&lt;tool&gt;/download_weights.sh</code> (git-ignored; two exceed GitHub's 100 MB limit)</li>
+          <li><b>gi_lesion</b> — our fine-tuned <code>best.pt</code> (19 MB) <span class="good">committed in-repo</span> (no public source)</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Run</h3>
+        <ul>
+          <li>One shared Python env runs all plugins (MONAI · Ultralytics · SimpleITK · torch)</li>
+          <li>Backend <code>uvicorn app.main:app :8001</code> · Frontend <code>npm run dev :3000</code></li>
+          <li>GPU auto-selected (<code>cuda:0</code> if available)</li>
+        </ul>
+        <div class="hl warn small"><b>Blackwell host:</b> these GPUs (sm_120) need <b>torch ≥ 2.7 + CUDA 12.8</b> — reinstall torch from the cu128 index after creating the env.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 12 SUMMARY -->
+  <section class="slide">
+    <h2><span class="num">11</span>Takeaways</h2>
+    <div class="grid g2">
+      <div class="card">
+        <h3>What was built</h3>
+        <ul>
+          <li>4 detection plugins in the platform's exact contract (<code>execute</code> + manifest + Studio card)</li>
+          <li>3 ready public models + 1 in-domain fine-tuned model</li>
+          <li>An explicit, auditable routing policy in the Skill</li>
+          <li>All GPU-verified; integrated, committed, pushed to <code>team-detection</code></li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>The lesson</h3>
+        <p>Agentic AI is <b>system design</b>, not one model: combine ready models with a fine-tuned one,
+          and wire them with selection logic that reasons over <span class="accent">source → anatomy →
+          context → runtime → approval</span>.</p>
+        <div class="hl small">Follow-ups: extend gi_lesion to multi-class GI; rename team; AGPL note for YOLO.</div>
+      </div>
+    </div>
+    <p class="muted" style="margin-top:1.2rem">ChatClinic Detection Suite · KAIST AI619 · branch <code>team-detection</code></p>
+  </section>
+
+</div>
+
+<button class="nav" id="prev" aria-label="previous">‹</button>
+<button class="nav" id="next" aria-label="next">›</button>
+<div class="footer">
+  <span id="label" class="mono"></span>
+  <div class="dots" id="dots"></div>
+  <span id="count" class="mono"></span>
+</div>
+
+<script>
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const dotsWrap = document.getElementById('dots');
+  let i = 0;
+  slides.forEach((_, n) => {
+    const b = document.createElement('button');
+    b.className = 'dot' + (n === 0 ? ' on' : '');
+    b.addEventListener('click', () => go(n));
+    dotsWrap.appendChild(b);
+  });
+  const dots = Array.from(dotsWrap.children);
+  const labels = ['Title','Platform','Data flow','Plugin contract','Four tools','Per-tool detail',
+    'Run (backend)','Orchestration','Frontend/Studio','Verification','Weights/Deploy','Takeaways'];
+  function go(n){
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach((s, k) => s.classList.toggle('active', k === i));
+    dots.forEach((d, k) => d.classList.toggle('on', k === i));
+    document.getElementById('bar').style.width = ((i)/(slides.length-1)*100) + '%';
+    document.getElementById('count').textContent = (i+1) + ' / ' + slides.length;
+    document.getElementById('label').textContent = labels[i] || '';
+  }
+  function next(){ go(i+1) } function prev(){ go(i-1) }
+  document.getElementById('next').addEventListener('click', next);
+  document.getElementById('prev').addEventListener('click', prev);
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { next(); e.preventDefault(); }
+    if (e.key === 'ArrowLeft' || e.key === 'PageUp') { prev(); e.preventDefault(); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length-1);
+  });
+  go(0);
+</script>
+</body>
+</html>
