@@ -1274,7 +1274,12 @@ function renderUserPromptInline(content: string) {
 }
 
 export default function Page() {
-  const [apiBase, setApiBase] = useState("http://127.0.0.1:8001");
+  const [apiBase, setApiBase] = useState(() => {
+    if (typeof window !== "undefined") {
+      return `http://${window.location.hostname}:8001`;
+    }
+    return "http://127.0.0.1:8001";
+  });
   const [toolRegistry, setToolRegistry] = useState<AnalysisResponse["tool_registry"]>([]);
   const [toolRegistryLoading, setToolRegistryLoading] = useState(true);
   const [messages, setMessages] = useState<ChatMessage[]>([

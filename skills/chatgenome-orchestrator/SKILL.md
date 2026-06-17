@@ -19,7 +19,7 @@ Upload a source file to get started. Supported formats: DICOM images, PNG/JPG/TI
 - Auto: DICOM Review (metadata, series summary, preview)
 - On demand: Lung Nodule CT Detection (`lung_nodule_ct_detector`) — 3D nodule boxes; approval required (GPU/runtime)
 
-**PNG / JPG / TIFF Image (incl. 2D chest X-ray)**
+**PNG / JPG / TIFF Image**
 - Auto: Image Review (metadata, EXIF, thumbnail)
 - On demand (chest X-ray): Lung Nodule CXR Detection (`lung_nodule_cxr_detector`) — 2D nodule boxes
 - On demand (colonoscopy still): GI Lesion Detection (`gi_lesion_detector`) — accuracy-oriented, in-domain

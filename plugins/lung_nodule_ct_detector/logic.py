@@ -63,7 +63,7 @@ def _preprocess(image_path, resampled):
     if resampled:
         tfs.append(LoadImaged(keys="image"))
     else:
-        tfs.append(LoadImaged(keys="image", reader="itkreader", affine_lps_to_ras=True))
+        tfs.append(LoadImaged(keys="image", reader="nibabelreader"))
     tfs += [EnsureChannelFirstd(keys="image"), Orientationd(keys="image", axcodes="RAS")]
     if not resampled:
         tfs.append(Spacingd(keys="image", pixdim=[0.703125, 0.703125, 1.25]))
