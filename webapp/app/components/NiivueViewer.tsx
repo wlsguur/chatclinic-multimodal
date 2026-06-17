@@ -4,25 +4,22 @@ import { useEffect, useRef, useState } from "react";
 
 interface NiivueViewerProps {
   niftiUrl: string;
+  overlayUrl?: string | null;
 }
 
-export default function NiivueViewer({ niftiUrl }: NiivueViewerProps) {
+export default function NiivueViewer({ niftiUrl, overlayUrl }: NiivueViewerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const nvRef = useRef<any>(null);
   const [error, setError] = useState<string | null>(null);
-  const [sliceType, setSliceType] = useState<number>(4); // multiplanar
+  const [sliceType, setSliceType] = useState<number>(4);
 
   useEffect(() => {
     if (!canvasRef.current || !niftiUrl) return;
-
     let cancelled = false;
 
     async function init() {
       try {
-        // Dynamic import — Niivue uses WebGL which is browser-only
-        const niivueModule = await import("@niivue/niivue");
-        const { Niivue } = niivueModule;
-
+        const { Niivue } = await import("@niivue/niivue");
         if (cancelled || !canvasRef.current) return;
 
         const nv = new Niivue({
@@ -32,39 +29,32 @@ export default function NiivueViewer({ niftiUrl }: NiivueViewerProps) {
         });
 
         nv.attachToCanvas(canvasRef.current);
-
-        await nv.loadVolumes([{ url: niftiUrl }]);
-
-        nv.setSliceType(4); // multiplanar ACS + render
+        const volumes: any[] = [{ url: niftiUrl }];
+        if (overlayUrl) {
+          volumes.push({ url: overlayUrl, colormap: "red", opacity: 0.6, cal_min: 0.1, cal_max: 1.5 });
+        }
+        await nv.loadVolumes(volumes);
+        nv.setSliceType(4);
         nvRef.current = nv;
       } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : String(err));
-        }
+        if (!cancelled) setError(err instanceof Error ? err.message : String(err));
       }
     }
 
     init();
-
     return () => {
       cancelled = true;
       nvRef.current = null;
     };
-  }, [niftiUrl]);
+  }, [niftiUrl, overlayUrl]);
 
   useEffect(() => {
     if (nvRef.current) {
-      try {
-        nvRef.current.setSliceType(sliceType);
-      } catch {
-        // ignore
-      }
+      try { nvRef.current.setSliceType(sliceType); } catch { /* ignore */ }
     }
   }, [sliceType]);
 
-  if (error) {
-    return <p className="errorText">Niivue could not be loaded: {error}</p>;
-  }
+  if (error) return <p className="errorText">Niivue could not be loaded: {error}</p>;
 
   return (
     <div>

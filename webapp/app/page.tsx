@@ -2108,10 +2108,12 @@ export default function Page() {
       const dr = result.artifacts?.detection_review;
       // merge the detection artifact into the active source analysis so the
       // detection_review card can overlay boxes on the existing image preview
+      const isNiftiSource = preAnalysisSource.source_type === "nifti";
+      const detRenderer = isNiftiSource ? "nifti_review" : "detection_review";
       const mergeDetection = (prev: any) => ({
         ...(prev ?? {}),
-        requested_view: "detection_review",
-        studio: { renderer: "detection_review" },
+        requested_view: detRenderer,
+        studio: { renderer: detRenderer },
         draft_answer: result.draft_answer ?? prev?.draft_answer,
         detection_tool: result.tool,
         artifacts: { ...((prev ?? {}).artifacts ?? {}), detection_review: dr, detection_provenance: result.provenance },
@@ -2120,8 +2122,8 @@ export default function Page() {
       else if (preAnalysisSource.source_type === "dicom") setDicomAnalysis(mergeDetection as any);
       else setNiftiAnalysis(mergeDetection as any);
       activateStudioFromPayload(
-        { requested_view: "detection_review", studio: { renderer: "detection_review" } },
-        "detection_review",
+        { requested_view: detRenderer, studio: { renderer: detRenderer } },
+        detRenderer,
         preAnalysisSource.source_type,
       );
       setStatus(toolReadyStatus(alias, remainder));
