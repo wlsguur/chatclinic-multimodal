@@ -112,6 +112,46 @@ def execute(payload: dict) -> dict:
         "score": round(float(scores[i]), 4),
     } for i in order]
 
+    # --- save preprocessed CT + detection mask for 3D viewer overlay ---
+    import nibabel as nib
+    import numpy as np
+    import re as _re
+
+    def _to_numpy(t):
+        if hasattr(t, 'detach'):
+            t = t.detach().cpu()
+        if hasattr(t, 'numpy'):
+            return t.numpy()
+        return np.array(t)
+
+    try:
+        # affine from MONAI MetaTensor
+        raw_img = img.cpu()
+        affine = _to_numpy(raw_img.meta.get('affine', np.eye(4)))
+        vol_shape = raw_img.shape[1:]  # (X, Y, Z)
+
+        # preprocessed CT
+        base = _re.sub(r'(\.nii\.gz|\.nii)$', '', image_path)
+        prep_path = base + '_prep.nii.gz'
+        mask_path_out = base + '_nodule_mask.nii.gz'
+
+        prep_data = _to_numpy(raw_img[0]).astype(np.float32)
+        nib.save(nib.Nifti1Image(prep_data, affine), prep_path)
+
+        # detection mask
+        mask = np.zeros(vol_shape, dtype=np.uint8)
+        for box in boxes[:max_det]:
+            x1, y1, z1, x2, y2, z2 = [int(round(v)) for v in box]
+            x1, x2 = sorted([max(0, min(x1, vol_shape[0]-1)), max(0, min(x2, vol_shape[0]-1))])
+            y1, y2 = sorted([max(0, min(y1, vol_shape[1]-1)), max(0, min(y2, vol_shape[1]-1))])
+            z1, z2 = sorted([max(0, min(z1, vol_shape[2]-1)), max(0, min(z2, vol_shape[2]-1))])
+            mask[x1:x2+1, y1:y2+1, z1:z2+1] = 1
+        nib.save(nib.Nifti1Image(mask, affine), mask_path_out)
+    except Exception as _e:
+        prep_path = None
+        mask_path_out = None
+        print(f"[lung_nodule_ct_detector] mask generation failed: {_e}")
+
     name = os.path.basename(image_path)
     draft = (f"Lung-nodule CT detection ready for `{name}`.\n\n"
              f"- {len(dets)} nodule candidate(s) (3D boxes, voxel coords); top score "
@@ -125,7 +165,13 @@ def execute(payload: dict) -> dict:
         "draft_answer": draft,
         "detections": dets,
         "artifacts": {
-            "detection_review": {"type": "bbox3d", "box_mode": "xyzxyz_voxel", "boxes": dets},
+            "detection_review": {
+                "type": "bbox3d",
+                "box_mode": "xyzxyz_voxel",
+                "boxes": dets,
+                "mask_nifti_path": mask_path_out,
+                "preprocessed_nifti_path": prep_path,
+            },
             "metadata": {"file_name": name, "num_detections": len(dets)},
         },
         "studio_cards": [{"id": "detection_review", "title": "Lung Nodule Detection (CT)",

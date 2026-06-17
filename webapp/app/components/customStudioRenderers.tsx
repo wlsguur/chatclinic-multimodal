@@ -532,9 +532,21 @@ function NiftiReviewCard({
   const shapeStr = analysis?.shape?.join(" × ") ?? "n/a";
   const voxelStr = analysis?.voxel_dims?.slice(0, 3).join(" × ") ?? "n/a";
   const fovStr = analysis?.fov_mm?.map((v: number) => v.toFixed(1)).join(" × ") ?? "n/a";
-  const niftiFileUrl = analysis?.source_nifti_path
+  const dr = analysis?.artifacts?.detection_review ?? {};
+  const prepPath: string | null = dr.preprocessed_nifti_path ?? null;
+  const maskPath: string | null = dr.mask_nifti_path ?? null;
+
+  const rawNiftiUrl = analysis?.source_nifti_path
     ? `${apiBase.replace(/\/$/, "")}/api/v1/files?path=${encodeURIComponent(analysis.source_nifti_path)}`
     : null;
+  const prepNiftiUrl = prepPath
+    ? `${apiBase.replace(/\/$/, "")}/api/v1/files?path=${encodeURIComponent(prepPath)}`
+    : null;
+  const maskUrl = maskPath
+    ? `${apiBase.replace(/\/$/, "")}/api/v1/files?path=${encodeURIComponent(maskPath)}`
+    : null;
+
+  const niftiFileUrl = prepNiftiUrl ?? rawNiftiUrl ?? "";
 
   return (
     <section className="notebookPanel studioCanvasPanel">
@@ -556,7 +568,7 @@ function NiftiReviewCard({
         {niftiFileUrl ? (
           <article className="miniCard">
             <h3>Interactive Viewer</h3>
-            <NiivueViewer niftiUrl={niftiFileUrl} />
+            <NiivueViewer niftiUrl={niftiFileUrl} overlayUrl={maskUrl} />
           </article>
         ) : analysis?.preview_data_url ? (
           <article className="miniCard">
@@ -570,6 +582,41 @@ function NiftiReviewCard({
             </div>
           </article>
         ) : null}
+        {dr.boxes && Array.isArray(dr.boxes) && dr.boxes.length > 0 && (
+          <article className="miniCard" style={{ maxWidth: "100%", overflow: "hidden" }}>
+            <h3>Detected Nodules ({dr.boxes.length})</h3>
+            <div className="variantTableWrap summaryStatsTableWrap">
+              <table className="variantTable summaryStatsTable">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Score</th>
+                    <th>Bounding Box (x1,y1,z1 → x2,y2,z2) voxel</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dr.boxes.map((det: any, idx: number) => {
+                    const b = det.box_xyzxyz_voxel ?? [];
+                    return (
+                      <tr key={idx}>
+                        <td>{idx + 1}</td>
+                        <td>{det.score?.toFixed(3) ?? "n/a"}</td>
+                        <td style={{ fontFamily: "monospace", fontSize: "0.82rem" }}>
+                          {b.length === 6 ? `(${b[0]}, ${b[1]}, ${b[2]}) → (${b[3]}, ${b[4]}, ${b[5]})` : JSON.stringify(b)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            {maskPath && (
+              <p style={{ marginTop: "0.5rem", fontSize: "0.8rem", color: "var(--text-secondary, #666)" }}>
+                Red overlay: nodule regions in the 3D viewer above.
+              </p>
+            )}
+          </article>
+        )}
         <article className="miniCard" style={{ maxWidth: "100%", overflow: "hidden" }}>
           <h3>Metadata</h3>
           <div className="variantTableWrap summaryStatsTableWrap">
