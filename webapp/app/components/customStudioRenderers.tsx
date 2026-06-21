@@ -453,7 +453,7 @@ function CxrImageWithBoxes({
   );
 }
 
-// Renderer for the hk_4_tools detectors (lung nodule CT/CXR, polyp, GI lesion).
+// Renderer for the hk_4_tools detectors (lung nodule CT/CXR, GI lesion).
 // Their tools emit `artifacts.detection_review` with mixed box keys and carry no
 // preview, so we overlay on the SOURCE image (merged in from auto Image Review)
 // and normalize box/score keys. 3D (CT) boxes render as a table.

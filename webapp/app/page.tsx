@@ -2084,14 +2084,12 @@ export default function Page() {
     const options = parseInlineOptions(remainder);
     setStatus(toolRunningStatus(alias, remainder));
 
-    // --- hk_4_tools detectors (lung nodule CT/CXR, polyp, GI lesion) ---
+    // --- hk_4_tools detectors (lung nodule CT/CXR, GI lesion) ---
     const detectorMap: Record<string, { tool: string; sources: string[] }> = {
       lung_nodule_cxr_detector: { tool: "lung_nodule_cxr_detector", sources: ["image"] },
       lung_nodule_cxr: { tool: "lung_nodule_cxr_detector", sources: ["image"] },
       gi_lesion_detector: { tool: "gi_lesion_detector", sources: ["image"] },
       gi_lesion: { tool: "gi_lesion_detector", sources: ["image"] },
-      polyp_colonoscopy_detector: { tool: "polyp_colonoscopy_detector", sources: ["image"] },
-      polyp: { tool: "polyp_colonoscopy_detector", sources: ["image"] },
       lung_nodule_ct_detector: { tool: "lung_nodule_ct_detector", sources: ["dicom", "nifti"] },
       lung_nodule_ct: { tool: "lung_nodule_ct_detector", sources: ["dicom", "nifti"] },
     };

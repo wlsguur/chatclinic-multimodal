@@ -23,7 +23,6 @@ Upload a source file to get started. Supported formats: DICOM images, PNG/JPG/TI
 - Auto: Image Review (metadata, EXIF, thumbnail)
 - On demand (chest X-ray): Lung Nodule CXR Detection (`lung_nodule_cxr_detector`) — 2D nodule boxes
 - On demand (colonoscopy still): GI Lesion Detection (`gi_lesion_detector`) — accuracy-oriented, in-domain
-- On demand (colonoscopy video/real-time): Polyp Detection (`polyp_colonoscopy_detector`) — real-time
 
 **NIfTI Volume (.nii, .nii.gz)**
 - Auto: NIfTI Review (shape, voxel dimensions, orientation, 3D viewer via Niivue)
@@ -206,11 +205,7 @@ image. Resolve top-to-bottom; stop at the first matching route.
 2. **Anatomical region of the raster image** (use the `image_review_tool` modality hint + the user's wording).
    Frontal chest X-ray → `lung_nodule_cxr_detector`. Colonoscopy / lower-GI endoscopy frame → step 3.
    Region unsupported/unclear → run no detector; ask the user to confirm the region.
-3. **Colonoscopy: choose by clinical context** (same frame, so context decides, not source type).
-   Single still frame / accuracy / report-grade → `gi_lesion_detector` (in-domain mAP@50 0.91).
-   Video / live stream / many frames / real-time triage → `polyp_colonoscopy_detector` (67.7 FPS).
-   Tie-break: default to `gi_lesion_detector`; switch to `polyp_colonoscopy_detector` when the request
-   mentions video / stream / real-time / frame-rate, or when latency matters more than accuracy.
+3. **Colonoscopy / lower-GI endoscopy frame** → `gi_lesion_detector` (in-domain mAP@50 0.91).
 4. **Host/runtime gate.** `lung_nodule_ct_detector` needs ~9 GB GPU and ~8 s/volume → run after approval;
    on a CPU-only host warn it will be slow before running. The three 2D detectors are CPU-friendly.
 5. **Approval.** `lung_nodule_ct_detector` requires approval (GPU/runtime cost); the 2D detectors do not.

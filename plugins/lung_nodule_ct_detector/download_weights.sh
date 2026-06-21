@@ -5,4 +5,5 @@ set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 mkdir -p "$HERE/bundle"
 python -m monai.bundle download lung_nodule_ct_detection --bundle_dir "$HERE/bundle"
-echo "Done -> $HERE/bundle/lung_nodule_ct_detection/models/model.pt"
+mv -f "$HERE/bundle/lung_nodule_ct_detection/models/model.pt" "$HERE/bundle/lung_nodule_ct_detection/models/lung_nodule_ct_detector.pt"
+echo "Done -> $HERE/bundle/lung_nodule_ct_detection/models/lung_nodule_ct_detector.pt"

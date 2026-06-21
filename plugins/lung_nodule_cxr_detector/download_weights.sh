@@ -10,4 +10,5 @@ fi
 cd "$DEST"
 git lfs install
 git lfs pull
-echo "Done -> $DEST/model.pth"
+mv -f "$DEST/model.pth" "$DEST/lung_nodule_cxr_detector.pth"
+echo "Done -> $DEST/lung_nodule_cxr_detector.pth"

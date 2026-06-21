@@ -33,7 +33,7 @@ def _load():
     import torch
     from monai.bundle import ConfigParser
 
-    if not os.path.exists(os.path.join(BUNDLE, "models", "model.pt")):
+    if not os.path.exists(os.path.join(BUNDLE, "models", "lung_nodule_ct_detector.pt")):
         raise FileNotFoundError(
             f"MONAI bundle weights not found under {BUNDLE}. "
             "Run plugins/lung_nodule_ct_detector/download_weights.sh or set $CHATCLINIC_CT_BUNDLE.")
@@ -46,7 +46,7 @@ def _load():
     network = parser.get_parsed_content("network")
     detector = parser.get_parsed_content("detector")
     parser.get_parsed_content("detector_ops")
-    sd = torch.load(os.path.join(BUNDLE, "models", "model.pt"),
+    sd = torch.load(os.path.join(BUNDLE, "models", "lung_nodule_ct_detector.pt"),
                     map_location="cpu", weights_only=True)
     network.load_state_dict(sd, strict=False)
     network.eval()
@@ -178,7 +178,7 @@ def execute(payload: dict) -> dict:
                           "subtitle": "3D bounding boxes + scores"}],
         "provenance": {
             "model": "MONAI lung_nodule_ct_detection (3D RetinaNet, LUNA16)",
-            "weights": os.path.join(BUNDLE, "models", "model.pt"),
+            "weights": os.path.join(BUNDLE, "models", "lung_nodule_ct_detector.pt"),
             "device": str(device), "runtime_sec": runtime,
         },
         "used_tools": ["lung_nodule_ct_detector"],

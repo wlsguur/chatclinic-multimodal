@@ -8,8 +8,8 @@ payload:
     image_path : str   -- frontal CXR: raster (.png/.jpg/.tif) OR .mha/.mhd/.nii(.gz)
     nms_iou    : float -- optional greedy-NMS IoU threshold (default 0.3)
 
-Weights (model.pth, ~158MB, public) are NOT committed. Run ./download_weights.sh first, or
-set $CHATCLINIC_NODE21_REPO to a checkout of node21_detection_baseline with model.pth pulled.
+Weights (lung_nodule_cxr_detector.pth, ~158MB, public) are NOT committed. Run ./download_weights.sh first, or
+set $CHATCLINIC_NODE21_REPO to a checkout of node21_detection_baseline with lung_nodule_cxr_detector.pth pulled.
 """
 from __future__ import annotations
 
@@ -30,7 +30,7 @@ def _load():
     import torchvision
     from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 
-    weights = os.path.join(REPO, "model.pth")
+    weights = os.path.join(REPO, "lung_nodule_cxr_detector.pth")
     if not os.path.exists(weights):
         raise FileNotFoundError(
             f"NODE21 weights not found at {weights}. "
@@ -126,7 +126,7 @@ def execute(payload: dict) -> dict:
                           "subtitle": "2D bounding boxes + likelihood"}],
         "provenance": {
             "model": "NODE21 baseline (Faster R-CNN ResNet50-FPN)",
-            "weights": os.path.join(REPO, "model.pth"),
+            "weights": os.path.join(REPO, "lung_nodule_cxr_detector.pth"),
             "device": str(device), "runtime_sec": runtime,
         },
         "used_tools": ["lung_nodule_cxr_detector"],

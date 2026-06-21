@@ -2,7 +2,7 @@
 
 Accuracy-oriented GI/endoscopic lesion detection on still endoscopy frames. YOLO11s
 fine-tuned in-domain on Kvasir-SEG (single class 'lesion'). The fine-tuned weights
-(best.pt, ~19MB) are committed in-repo under ./weights/ (our own artifact — no public source).
+(gi_lesion_detector.pt, ~19MB) are committed in-repo under ./weights/ (our own artifact — no public source).
 
 Platform contract: `execute(payload: dict) -> dict`.
 payload:
@@ -17,7 +17,7 @@ import os
 import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-WEIGHTS = os.environ.get("CHATCLINIC_GI_WEIGHTS", os.path.join(HERE, "weights", "best.pt"))
+WEIGHTS = os.environ.get("CHATCLINIC_GI_WEIGHTS", os.path.join(HERE, "weights", "gi_lesion_detector.pt"))
 # keep Ultralytics' writable config off $HOME on shared/locked hosts (-> /tmp/Ultralytics)
 os.environ.setdefault("YOLO_CONFIG_DIR", "/tmp")
 
